@@ -2,12 +2,24 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import json
 import os
+from pathlib import Path
 import requests
 from pypdf import PdfReader
 import gradio as gr
 
 
-load_dotenv(override=True)
+def _load_env() -> None:
+    """Load `.env` from this folder or any parent (e.g. repo root)."""
+    here = Path(__file__).resolve().parent
+    for directory in [here, *here.parents[:12]]:
+        env_file = directory / ".env"
+        if env_file.is_file():
+            load_dotenv(env_file, override=True)
+            return
+    load_dotenv(override=True)
+
+
+_load_env()
 
 def push(text):
     requests.post(
@@ -76,7 +88,13 @@ tools = [{"type": "function", "function": record_user_details_json},
 class Me:
 
     def __init__(self):
-        self.openai = OpenAI()
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is not set. Add it to the repo root .env file "
+                "or set it as an environment variable (e.g. a Hugging Face Space secret)."
+            )
+        self.openai = OpenAI(api_key=api_key)
         self.name = "Hein Htet Aung"
         reader = PdfReader("me/linkedin.pdf")
         self.linkedin = ""
