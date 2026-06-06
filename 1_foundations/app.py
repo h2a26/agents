@@ -85,16 +85,21 @@ tools = [{"type": "function", "function": record_user_details_json},
         {"type": "function", "function": record_unknown_question_json}]
 
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+GEMINI_CHAT_MODEL = "gemini-2.5-flash-lite"
+
+
 class Me:
 
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError(
-                "OPENAI_API_KEY is not set. Add it to the repo root .env file "
-                "or set it as an environment variable (e.g. a Hugging Face Space secret)."
+                "GEMINI_API_KEY (or GOOGLE_API_KEY) is not set. Add it to the repo root .env file "
+                "or set it as an environment variable (e.g. a Hugging Face Space secret). "
+                "Get a free key at https://aistudio.google.com/"
             )
-        self.openai = OpenAI(api_key=api_key)
+        self.client = OpenAI(base_url=GEMINI_BASE_URL, api_key=api_key)
         self.name = "Hein Htet Aung"
         reader = PdfReader("me/linkedin.pdf")
         self.linkedin = ""
@@ -134,7 +139,9 @@ If the user is engaging in discussion, try to steer them towards getting in touc
         messages = [{"role": "system", "content": self.system_prompt()}] + history + [{"role": "user", "content": message}]
         done = False
         while not done:
-            response = self.openai.chat.completions.create(model="gpt-5.4-mini", messages=messages, tools=tools)
+            response = self.client.chat.completions.create(
+                model=GEMINI_CHAT_MODEL, messages=messages, tools=tools
+            )
             if response.choices[0].finish_reason=="tool_calls":
                 message = response.choices[0].message
                 tool_calls = message.tool_calls
